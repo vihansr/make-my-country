@@ -1,0 +1,499 @@
+Build a full-stack web application called **GeoPolis: AI Geopolitical Simulator**.
+
+## Overview
+
+GeoPolis is a geopolitical strategy simulator where users take control of any country as its President, Prime Minister, Monarch, or Head of State. The player makes policy decisions, and an AI-powered simulation engine generates realistic economic, political, military, diplomatic, environmental, and societal consequences.
+
+The experience should feel like a combination of a grand strategy game, a political simulator, and an AI-driven alternate history generator.
+
+Use the Groq API for all narrative generation. The API key is already available in the `.env` file under the variable name `key`. Read it from environment variables and never hardcode credentials.
+
+---
+
+# Tech Stack
+
+Frontend:
+
+* Next.js 15
+* React
+* TypeScript
+* Tailwind CSS
+* Framer Motion
+* Recharts
+
+Backend:
+
+* Next.js API Routes
+* TypeScript
+
+AI:
+
+* Groq API
+* Structured JSON outputs where possible
+
+Persistence:
+
+* PostgreSQL
+* Prisma ORM
+
+---
+
+# Application Structure
+
+## Landing Page
+
+Minimal futuristic interface.
+
+Center:
+
+* Project title
+* "Start Simulation" button
+
+Background:
+
+* Animated globe
+* Geopolitical-style visualization
+* Subtle particle effects
+
+When Start Simulation is clicked:
+
+Navigate to Country Selection.
+
+---
+
+## Country Selection Screen
+
+Searchable list of countries.
+
+Display:
+
+* Flag
+* Country name
+* Population
+* GDP
+* Government Type
+
+Options:
+
+* Select country
+* Select role:
+
+  * President
+  * Prime Minister
+  * Monarch
+  * Military Leader
+
+After selection:
+
+Create a simulation state.
+
+---
+
+# Core Simulation State
+
+Every nation must maintain:
+
+```typescript
+interface NationState {
+  economy: {
+    gdp: number;
+    inflation: number;
+    unemployment: number;
+    debt: number;
+    currencyStrength: number;
+    foreignInvestment: number;
+  };
+
+  society: {
+    happiness: number;
+    literacy: number;
+    healthcare: number;
+    crimeRate: number;
+    inequality: number;
+  };
+
+  politics: {
+    approvalRating: number;
+    corruption: number;
+    stability: number;
+    polarization: number;
+  };
+
+  military: {
+    readiness: number;
+    manpower: number;
+    technology: number;
+    nuclearCapability: number;
+  };
+
+  diplomacy: {
+    influence: number;
+    alliances: number;
+    globalRelations: Record<string, number>;
+  };
+
+  environment: {
+    pollution: number;
+    energySecurity: number;
+    climateRisk: number;
+  };
+}
+```
+
+---
+
+# Main Dashboard
+
+Create a premium strategy-game interface.
+
+Layout:
+
+Left Sidebar:
+
+* Economy
+* Society
+* Politics
+* Military
+* Diplomacy
+* Environment
+* Intelligence
+
+Center:
+
+* Current country overview
+* Key indicators
+* World map
+
+Right Sidebar:
+
+* News Feed
+* AI Advisor Reports
+* Notifications
+
+Top Navigation:
+
+* Current Year
+* Turn Counter
+* National Approval
+* GDP
+* Treasury
+
+---
+
+# Turn-Based Engine
+
+One turn equals one quarter.
+
+Flow:
+
+1. Show nation status
+2. Generate events
+3. Present decisions
+4. Player chooses actions
+5. Simulation updates
+6. AI generates consequences
+7. Advance to next turn
+
+---
+
+# Decision System
+
+Create policy categories.
+
+Economic:
+
+* Raise taxes
+* Lower taxes
+* Invest in infrastructure
+* Privatize industries
+* Subsidize sectors
+
+Military:
+
+* Increase defense spending
+* Build bases
+* Develop weapons
+* Begin nuclear program
+
+Social:
+
+* Expand healthcare
+* Education reform
+* Welfare expansion
+
+Diplomatic:
+
+* Form alliance
+* Sign trade agreement
+* Apply sanctions
+* Mediate conflicts
+
+Environmental:
+
+* Renewable energy investment
+* Carbon tax
+* Conservation programs
+
+Every decision must modify multiple systems simultaneously.
+
+Example:
+
+Increase Military Budget:
+
+Positive:
+
+* Military readiness
+* National security
+
+Negative:
+
+* Budget pressure
+* Lower social spending
+
+Long-term:
+
+* Regional tensions
+* Arms race possibility
+
+---
+
+# Event Engine
+
+Generate dynamic events.
+
+Categories:
+
+Domestic:
+
+* Elections
+* Scandals
+* Protests
+* Economic booms
+* Recessions
+
+International:
+
+* Trade wars
+* Border disputes
+* Diplomatic summits
+* Sanctions
+
+Environmental:
+
+* Floods
+* Droughts
+* Heat waves
+* Earthquakes
+
+Technology:
+
+* AI breakthrough
+* Semiconductor innovation
+* Space mission success
+
+Events should be stored and affect future gameplay.
+
+---
+
+# Faction System
+
+Every nation should contain factions.
+
+Examples:
+
+* Business Elite
+* Military
+* Workers
+* Farmers
+* Youth
+* Environmentalists
+* Religious Groups
+
+Each faction has:
+
+```typescript
+{
+  support: number;
+  influence: number;
+}
+```
+
+Decisions affect faction support.
+
+Low support from powerful factions increases instability.
+
+---
+
+# Diplomacy System
+
+Maintain relation scores.
+
+Range:
+
+-100 = Hostile
+
+0 = Neutral
+
+100 = Ally
+
+Actions modify relations.
+
+Examples:
+
+Trade Deal:
++10
+
+Military Pact:
++20
+
+Sanctions:
+-25
+
+Border Conflict:
+-40
+
+Use a world diplomacy matrix.
+
+---
+
+# AI Advisor System
+
+Create multiple advisors.
+
+Finance Advisor
+Defense Advisor
+Foreign Affairs Advisor
+Environmental Advisor
+
+Each advisor analyzes the current situation and provides recommendations.
+
+Responses should sometimes conflict with one another.
+
+---
+
+# AI Narrative Layer
+
+Use Groq API.
+
+Generate:
+
+1. News headlines
+2. International reactions
+3. Advisor reports
+4. Public sentiment summaries
+5. Historical timeline entries
+
+All outputs should feel realistic and professional.
+
+Prompt AI with:
+
+* Current nation state
+* Current turn
+* Recent decisions
+* Active events
+
+Return structured JSON.
+
+Example:
+
+```json
+{
+  "headline": "",
+  "summary": "",
+  "internationalReaction": "",
+  "publicOpinion": ""
+}
+```
+
+---
+
+# World News Feed
+
+Generate a newspaper-like panel.
+
+Examples:
+
+"Massive protests erupt after tax reforms."
+
+"Neighboring countries condemn military buildup."
+
+"Foreign investors respond positively to deregulation."
+
+Store all news chronologically.
+
+---
+
+# Alternate History Timeline
+
+Maintain a historical log.
+
+Example:
+
+2026:
+
+* Infrastructure Expansion Act passed
+
+2028:
+
+* GDP surpasses regional rivals
+
+2031:
+
+* Military alliance signed
+
+Allow users to review the entire history of their nation.
+
+---
+
+# Save System
+
+Allow:
+
+* Save Simulation
+* Load Simulation
+* Auto-save after every turn
+
+Persist all nation state data.
+
+---
+
+# UI Style
+
+Theme:
+
+* Dark
+* Premium
+* Futuristic
+* Geopolitical command center
+
+Visual Inspiration:
+
+* Government intelligence dashboards
+* Strategy games
+* Economic terminals
+* Military command centers
+
+Use:
+
+* Glassmorphism
+* Animated charts
+* Interactive maps
+* Smooth transitions
+
+---
+
+# Deliverables
+
+Build:
+
+* Complete frontend
+* Complete backend
+* Simulation engine
+* Groq integration
+* Database schema
+* API routes
+* State management
+* Save/load functionality
+* Responsive design
+
+Generate production-quality code with clear folder structure, strong TypeScript typing, and modular architecture. Focus on realism, scalability, maintainability, and immersive geopolitical simulation.
