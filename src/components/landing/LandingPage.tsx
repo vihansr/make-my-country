@@ -2,14 +2,13 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Globe, Shield, Activity, Cpu, Play, FolderOpen, Sparkles, ChevronRight } from 'lucide-react';
+import { Globe, Shield, Activity, Cpu, Play, Sparkles, ChevronRight } from 'lucide-react';
 
 interface LandingPageProps {
   onStart: () => void;
-  onLoad: () => void;
 }
 
-export const LandingPage: React.FC<LandingPageProps> = ({ onStart, onLoad }) => {
+export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
   return (
     <div className="relative min-h-screen w-full flex flex-col items-center justify-center overflow-hidden bg-grid-pattern selection:bg-cyan-500 selection:text-black">
       {/* Background glowing gradient spheres */}
@@ -105,26 +104,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart, onLoad }) => 
         </div>
 
         {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row gap-5 items-center justify-center w-full max-w-md">
+        <div className="flex items-center justify-center w-full max-w-xs">
           <motion.button
             whileHover={{ scale: 1.04 }}
             whileTap={{ scale: 0.98 }}
             onClick={onStart}
-            className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-black font-bold text-lg flex items-center justify-center gap-3 shadow-[0_0_25px_rgba(6,182,212,0.4)] transition-all group"
+            className="w-full px-8 py-4 rounded-2xl bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-black font-bold text-lg flex items-center justify-center gap-3 shadow-[0_0_25px_rgba(6,182,212,0.4)] transition-all group"
           >
             <Play className="w-5 h-5 fill-black group-hover:translate-x-0.5 transition-transform" />
             <span>Start Simulation</span>
             <ChevronRight className="w-5 h-5 opacity-70 group-hover:translate-x-1 transition-transform" />
-          </motion.button>
-
-          <motion.button
-            whileHover={{ scale: 1.04 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={onLoad}
-            className="w-full sm:w-auto px-6 py-4 rounded-2xl glass-panel-interactive border border-slate-700 text-slate-200 font-semibold text-base flex items-center justify-center gap-2.5 hover:text-white"
-          >
-            <FolderOpen className="w-5 h-5 text-cyan-400" />
-            <span>Load Saved Game</span>
           </motion.button>
         </div>
       </motion.div>

@@ -4,11 +4,10 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LandingPage } from '@/components/landing/LandingPage';
 import { CountrySelection } from '@/components/selection/CountrySelection';
-import { LoadSaveModal } from '@/components/selection/LoadSaveModal';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { Globe } from 'lucide-react';
 
-type ScreenState = 'landing' | 'select_country' | 'load_save' | 'dashboard';
+type ScreenState = 'landing' | 'select_country' | 'dashboard';
 
 export default function Home() {
   const [screen, setScreen] = useState<ScreenState>('landing');
@@ -39,10 +38,6 @@ export default function Home() {
   };
 
   const handleSimulationStarted = async (gameSaveId: string) => {
-    await fetchGameSave(gameSaveId);
-  };
-
-  const handleSaveSelected = async (gameSaveId: string) => {
     await fetchGameSave(gameSaveId);
   };
 
@@ -104,7 +99,6 @@ export default function Home() {
           >
             <LandingPage
               onStart={() => setScreen('select_country')}
-              onLoad={() => setScreen('load_save')}
             />
           </motion.div>
         )}
@@ -120,21 +114,6 @@ export default function Home() {
             <CountrySelection
               onBack={() => setScreen('landing')}
               onSimulationStarted={handleSimulationStarted}
-            />
-          </motion.div>
-        )}
-
-        {screen === 'load_save' && (
-          <motion.div
-            key="load_save"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.4 }}
-          >
-            <LoadSaveModal
-              onBack={() => setScreen('landing')}
-              onSaveSelected={handleSaveSelected}
             />
           </motion.div>
         )}

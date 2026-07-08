@@ -15,7 +15,6 @@ export const CountrySelection: React.FC<CountrySelectionProps> = ({ onBack, onSi
   const [selectedRegion, setSelectedRegion] = useState<string>('All');
   const [selectedCountry, setSelectedCountry] = useState<CountryInfo | null>(WORLD_COUNTRIES[0]);
   const [selectedRole, setSelectedRole] = useState<string>('President');
-  const [saveName, setSaveName] = useState('');
   const [isStarting, setIsStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -49,7 +48,7 @@ export const CountrySelection: React.FC<CountrySelectionProps> = ({ onBack, onSi
         body: JSON.stringify({
           countryId: selectedCountry.id,
           roleName: selectedRole,
-          saveName: saveName.trim() || `${selectedCountry.name} (${selectedRole})`,
+          saveName: `${selectedCountry.name} (${selectedRole})`,
         }),
       });
       const data = await res.json();
@@ -260,19 +259,6 @@ export const CountrySelection: React.FC<CountrySelectionProps> = ({ onBack, onSi
                   })}
                 </div>
 
-                {/* Save Game Name Input */}
-                <div className="mb-6">
-                  <label className="block text-xs font-mono text-slate-400 uppercase tracking-wider mb-2">
-                    Simulation File Name (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    placeholder={`${selectedCountry.name} (${selectedRole}) - Year 2026`}
-                    value={saveName}
-                    onChange={(e) => setSaveName(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl bg-slate-900/80 border border-slate-700 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-colors font-sans"
-                  />
-                </div>
               </div>
 
               {/* Start Simulation Launch Button */}
