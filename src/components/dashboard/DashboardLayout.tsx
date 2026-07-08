@@ -2,11 +2,12 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Globe, Shield, Activity, Cpu, Calendar, Clock, LogOut, Zap, Bell, ChevronRight, Newspaper, Users, BarChart3, History, Award, AlertCircle } from 'lucide-react';
+import { Globe, Shield, Activity, Cpu, Calendar, Clock, LogOut, Zap, Bell, ChevronRight, Newspaper, Users, BarChart3, History, Award, AlertCircle, Handshake } from 'lucide-react';
 import { OverviewPanel } from './panels/OverviewPanel';
 import { AnalyticsPanels } from './panels/AnalyticsPanels';
 import { AdvisorPanel } from './panels/AdvisorPanel';
 import { TimelinePanel } from './panels/TimelinePanel';
+import { DiplomacyPanel } from './panels/DiplomacyPanel';
 import { DecisionModal } from './DecisionModal';
 import { InitialNationStats } from '@/lib/data/countries';
 
@@ -23,9 +24,10 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   onExitToMenu,
   isProcessingTurn,
 }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'analytics' | 'advisors' | 'timeline'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'analytics' | 'advisors' | 'timeline' | 'diplomacy'>('overview');
   const [isDecisionModalOpen, setIsDecisionModalOpen] = useState(false);
   const [notification, setNotification] = useState<string | null>(null);
+  const [draftedPrompt, setDraftedPrompt] = useState<string>('');
 
   if (!gameSave || !gameSave.nationState) return null;
 
@@ -72,6 +74,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
 
   const handleEnactPolicies = async (selectedIds: string[], customPrompt?: string) => {
     setIsDecisionModalOpen(false);
+    setDraftedPrompt('');
     await onAdvanceTurn(selectedIds, customPrompt);
     const msg = customPrompt ? `AI evaluated executive directive: "${customPrompt.slice(0, 60)}..."` : `Quarterly simulation updated! Enacted ${selectedIds.length} strategic decrees.`;
     setNotification(msg);
@@ -208,6 +211,18 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
               <History className="w-5 h-5 flex-shrink-0 text-amber-400" />
               <span className="hidden md:inline">History & Timeline</span>
             </button>
+
+            <button
+              onClick={() => setActiveTab('diplomacy')}
+              className={`w-full p-3 rounded-2xl flex items-center gap-3 transition-all text-sm font-semibold ${
+                activeTab === 'diplomacy'
+                  ? 'bg-gradient-to-r from-violet-500/20 to-transparent border-l-4 border-violet-500 text-violet-300 shadow-sm'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-900/50'
+              }`}
+            >
+              <Handshake className="w-5 h-5 flex-shrink-0 text-violet-400 animate-pulse" />
+              <span className="hidden md:inline">Global Diplomacy</span>
+            </button>
           </div>
 
           <div className="hidden md:block p-4 rounded-2xl bg-slate-900/80 border border-slate-800 text-xs font-mono text-slate-400 space-y-2">
@@ -248,7 +263,10 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
             )}
             {activeTab === 'analytics' && (
               <motion.div key="analytics" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <AnalyticsPanels stats={stats} />
+                <AnalyticsPanels
+                  stats={stats}
+                  historicalData={generateHistoricalData(gameSave.currentYear, gameSave.currentTurn, stats)}
+                />
               </motion.div>
             )}
             {activeTab === 'advisors' && (
@@ -264,6 +282,18 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                 <TimelinePanel
                   countryName={gameSave.countryName}
                   timeline={gameSave.timeline || []}
+                />
+              </motion.div>
+            )}
+            {activeTab === 'diplomacy' && (
+              <motion.div key="diplomacy" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <DiplomacyPanel
+                  countryName={gameSave.countryName}
+                  diplomacy={gameSave.diplomacy || []}
+                  onDraftDecree={(text) => {
+                    setDraftedPrompt(text);
+                    setIsDecisionModalOpen(true);
+                  }}
                 />
               </motion.div>
             )}
@@ -310,11 +340,51 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
       {/* Decision Enactment Modal */}
       <DecisionModal
         isOpen={isDecisionModalOpen}
-        onClose={() => setIsDecisionModalOpen(false)}
+        onClose={() => {
+          setIsDecisionModalOpen(false);
+          setDraftedPrompt('');
+        }}
         stats={stats}
         onEnactPolicies={handleEnactPolicies}
         isProcessing={isProcessingTurn}
+        initialPrompt={draftedPrompt}
       />
     </div>
   );
 };
+
+function generateHistoricalData(currentYear: number, currentTurn: number, stats: InitialNationStats) {
+  const totalQuartersElapsed = (currentYear - 2026) * 4 + (currentTurn - 1);
+  if (totalQuartersElapsed <= 0) {
+    return [
+      { turn: '2025 Q3', gdp: Math.round(stats.economy.gdp * 0.94), approval: Math.round(stats.politics.approvalRating * 0.95), stability: Math.round(stats.politics.stability * 0.96), readiness: Math.round(stats.military.readiness * 0.95) },
+      { turn: '2025 Q4', gdp: Math.round(stats.economy.gdp * 0.97), approval: Math.round(stats.politics.approvalRating * 0.98), stability: Math.round(stats.politics.stability * 0.98), readiness: Math.round(stats.military.readiness * 0.98) },
+      { turn: `${currentYear} Q${currentTurn}`, gdp: Math.round(stats.economy.gdp), approval: Math.round(stats.politics.approvalRating), stability: Math.round(stats.politics.stability), readiness: Math.round(stats.military.readiness) },
+    ];
+  }
+
+  const result = [];
+  const startGdp = stats.economy.gdp * 0.9;
+  const startApp = Math.max(20, stats.politics.approvalRating - 10);
+  const startStab = Math.max(20, stats.politics.stability - 8);
+  const startRead = Math.max(20, stats.military.readiness - 6);
+
+  const points = Math.min(8, totalQuartersElapsed + 1);
+  for (let i = 0; i < points; i++) {
+    const ratio = i / (points - 1 || 1);
+    let y = 2026 + Math.floor((currentTurn - 1 - (points - 1 - i)) / 4);
+    let q = ((currentTurn - 1 - (points - 1 - i)) % 4) + 1;
+    if (q <= 0) {
+      q += 4;
+      y -= 1;
+    }
+    result.push({
+      turn: `${y} Q${q}`,
+      gdp: Math.round(startGdp + (stats.economy.gdp - startGdp) * ratio),
+      approval: Math.round(startApp + (stats.politics.approvalRating - startApp) * ratio),
+      stability: Math.round(startStab + (stats.politics.stability - startStab) * ratio),
+      readiness: Math.round(startRead + (stats.military.readiness - startRead) * ratio),
+    });
+  }
+  return result;
+}

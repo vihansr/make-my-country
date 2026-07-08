@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Zap, DollarSign, ShieldAlert, Heart, Globe, Leaf, Check, AlertTriangle, ArrowRight, Sparkles, Send, Lightbulb } from 'lucide-react';
 import { POLICIES_CATALOG, PolicyCategory, PolicyOption } from '@/lib/data/policies';
@@ -12,6 +12,7 @@ interface DecisionModalProps {
   stats: InitialNationStats;
   onEnactPolicies: (selectedPolicyIds: string[], customPrompt?: string) => void;
   isProcessing: boolean;
+  initialPrompt?: string;
 }
 
 export const DecisionModal: React.FC<DecisionModalProps> = ({
@@ -20,10 +21,22 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
   stats,
   onEnactPolicies,
   isProcessing,
+  initialPrompt = '',
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<PolicyCategory>('Economic');
   const [selectedPolicyIds, setSelectedPolicyIds] = useState<string[]>([]);
   const [customPrompt, setCustomPrompt] = useState<string>('');
+
+  useEffect(() => {
+    if (isOpen) {
+      if (initialPrompt) {
+        setCustomPrompt(initialPrompt);
+      }
+    } else {
+      setSelectedPolicyIds([]);
+      setCustomPrompt('');
+    }
+  }, [isOpen, initialPrompt]);
 
   if (!isOpen) return null;
 
@@ -156,10 +169,10 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
         </div>
 
         {/* Content Body: Left List of Policies, Right Summary Desk */}
-        <div className="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-12">
+        <div className="flex-1 overflow-y-auto lg:overflow-hidden grid grid-cols-1 lg:grid-cols-12 min-h-0">
           
           {/* Left 7 Cols: Policy List */}
-          <div className="lg:col-span-7 p-6 overflow-y-auto max-h-[340px] space-y-3 border-r border-slate-800/80">
+          <div className="lg:col-span-7 p-6 overflow-y-auto space-y-3 border-r border-slate-800/80 min-h-0 h-full">
             {filteredPolicies.map((policy) => {
               const isSelected = selectedPolicyIds.includes(policy.id);
               return (
@@ -221,7 +234,7 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
           </div>
 
           {/* Right 5 Cols: Selected Summary & Action Footer */}
-          <div className="lg:col-span-5 p-6 flex flex-col justify-between bg-slate-900/40">
+          <div className="lg:col-span-5 p-6 overflow-y-auto flex flex-col justify-between bg-slate-900/40 min-h-0 h-full">
             <div>
               <h3 className="text-sm font-bold text-white uppercase font-mono mb-4 flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-cyan-400" />
