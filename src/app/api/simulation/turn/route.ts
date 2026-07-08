@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
+import { randomUUID } from 'crypto';
 import { evaluateTurn } from '@/lib/simulation/engine';
 import { generateTurnNarrative, generateAdvisorReports, evaluateCustomDecision, CustomDecisionResponse } from '@/lib/ai/groq';
 import { InitialNationStats } from '@/lib/data/countries';
@@ -7,23 +7,14 @@ import { InitialNationStats } from '@/lib/data/countries';
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { gameSaveId, selectedPolicyIds = [], customDecisionPrompt } = body;
+    const { gameSave, selectedPolicyIds = [], customDecisionPrompt } = body;
 
-    if (!gameSaveId) {
-      return NextResponse.json({ error: 'Missing gameSaveId' }, { status: 400 });
+    if (!gameSave) {
+      return NextResponse.json({ error: 'Missing gameSave' }, { status: 400 });
     }
 
-    const gameSave = await prisma.gameSave.findUnique({
-      where: { id: gameSaveId },
-      include: {
-        nationState: true,
-        factions: true,
-        diplomacy: true,
-      },
-    });
-
-    if (!gameSave || !gameSave.nationState) {
-      return NextResponse.json({ error: 'Save game or nation state not found' }, { status: 404 });
+    if (!gameSave.nationState) {
+      return NextResponse.json({ error: 'Nation state not found in gameSave' }, { status: 400 });
     }
 
     const ns = gameSave.nationState;
@@ -60,7 +51,7 @@ export async function POST(req: NextRequest) {
         energySecurity: ns.energySecurity,
         climateRisk: ns.climateRisk,
       },
-      factions: gameSave.factions.map((f) => ({
+      factions: gameSave.factions.map((f: any) => ({
         name: f.name,
         support: f.support,
         influence: f.influence,
@@ -144,97 +135,100 @@ export async function POST(req: NextRequest) {
     const advisorReports = await generateAdvisorReports(gameSave.countryName, updated);
 
     // Update Diplomacy Relations if any policy modified diplomacy
-    for (const policy of turnOutcome.enactedPolicies) {
-      if (policy.impact.diplomaticRelationsChange) {
-        const change = policy.impact.diplomaticRelationsChange;
-        for (const rel of gameSave.diplomacy) {
-          const newScore = Math.max(-100, Math.min(100, rel.relationScore + change));
-          await prisma.diplomacyRelation.update({
-            where: { id: rel.id },
-            data: { relationScore: newScore },
-          });
+    // Update Diplomacy Relations
+    const updatedDiplomacy = gameSave.diplomacy.map((rel: any) => {
+      let score = rel.relationScore;
+      for (const policy of turnOutcome.enactedPolicies) {
+        if (policy.impact.diplomaticRelationsChange) {
+          score = Math.max(-100, Math.min(100, score + policy.impact.diplomaticRelationsChange));
         }
       }
-    }
-
-    // Update NationState & Factions in database
-    await prisma.nationState.update({
-      where: { id: ns.id },
-      data: {
-        gdp: updated.economy.gdp,
-        inflation: updated.economy.inflation,
-        unemployment: updated.economy.unemployment,
-        debt: updated.economy.debt,
-        currencyStrength: updated.economy.currencyStrength,
-        foreignInvestment: updated.economy.foreignInvestment,
-
-        happiness: updated.society.happiness,
-        literacy: updated.society.literacy,
-        healthcare: updated.society.healthcare,
-        crimeRate: updated.society.crimeRate,
-        inequality: updated.society.inequality,
-
-        approvalRating: updated.politics.approvalRating,
-        corruption: updated.politics.corruption,
-        stability: updated.politics.stability,
-        polarization: updated.politics.polarization,
-
-        readiness: updated.military.readiness,
-        manpower: updated.military.manpower,
-        technology: updated.military.technology,
-        nuclearCapability: updated.military.nuclearCapability,
-
-        pollution: updated.environment.pollution,
-        energySecurity: updated.environment.energySecurity,
-        climateRisk: updated.environment.climateRisk,
-
-        advisorReportsJson: JSON.stringify(advisorReports),
-      },
+      return { ...rel, relationScore: score };
     });
 
-    for (const f of updated.factions) {
-      const dbFaction = gameSave.factions.find((df) => df.name === f.name);
-      if (dbFaction) {
-        await prisma.faction.update({
-          where: { id: dbFaction.id },
-          data: { support: f.support, influence: f.influence },
-        });
+    // Update NationState in-memory
+    const updatedNationState = {
+      ...ns,
+      gdp: updated.economy.gdp,
+      inflation: updated.economy.inflation,
+      unemployment: updated.economy.unemployment,
+      debt: updated.economy.debt,
+      currencyStrength: updated.economy.currencyStrength,
+      foreignInvestment: updated.economy.foreignInvestment,
+
+      happiness: updated.society.happiness,
+      literacy: updated.society.literacy,
+      healthcare: updated.society.healthcare,
+      crimeRate: updated.society.crimeRate,
+      inequality: updated.society.inequality,
+
+      approvalRating: updated.politics.approvalRating,
+      corruption: updated.politics.corruption,
+      stability: updated.politics.stability,
+      polarization: updated.politics.polarization,
+
+      readiness: updated.military.readiness,
+      manpower: updated.military.manpower,
+      technology: updated.military.technology,
+      nuclearCapability: updated.military.nuclearCapability,
+
+      pollution: updated.environment.pollution,
+      energySecurity: updated.environment.energySecurity,
+      climateRisk: updated.environment.climateRisk,
+
+      advisorReportsJson: JSON.stringify(advisorReports),
+    };
+
+    // Update Factions in-memory
+    const updatedFactions = gameSave.factions.map((df: any) => {
+      const f = updated.factions.find((uf: any) => uf.name === df.name);
+      if (f) {
+        return { ...df, support: f.support, influence: f.influence };
       }
-    }
+      return df;
+    });
 
     // Create News Items
     const newsToCreate = [
       {
+        id: randomUUID(),
+        gameSaveId: gameSave.id,
         year: nextYear,
         turn: nextTurn,
         headline: narrative.headline,
         category: customOutcome ? 'Executive Order' : 'Domestic',
         summary: narrative.summary,
+        createdAt: new Date().toISOString(),
       },
       {
+        id: randomUUID(),
+        gameSaveId: gameSave.id,
         year: nextYear,
         turn: nextTurn,
         headline: `Global Reaction: ${gameSave.countryName} Q${nextTurn} Posture`,
         category: 'International',
         summary: narrative.internationalReaction,
+        createdAt: new Date().toISOString(),
       },
     ];
 
     if (turnOutcome.triggeredEvent) {
       newsToCreate.push({
+        id: randomUUID(),
+        gameSaveId: gameSave.id,
         year: nextYear,
         turn: nextTurn,
         headline: `CRISIS ALERT: ${turnOutcome.triggeredEvent.title}`,
         category: turnOutcome.triggeredEvent.category,
         summary: `${turnOutcome.triggeredEvent.description} Impact: ${turnOutcome.triggeredEvent.impactSummary}`,
+        createdAt: new Date().toISOString(),
       });
     }
 
-    await prisma.newsItem.createMany({
-      data: newsToCreate.map((item) => ({ ...item, gameSaveId: gameSave.id })),
-    });
+    const updatedNewsItems = [...newsToCreate, ...(gameSave.newsItems || [])];
 
     // Create Timeline Event if custom decision, major policies passed, or event occurred
+    let updatedTimeline = gameSave.timeline || [];
     if (customOutcome || turnOutcome.enactedPolicies.length > 0 || turnOutcome.triggeredEvent) {
       const title = customOutcome
         ? `Year ${nextYear} Q${nextTurn}: ${customOutcome.policyTitle}`
@@ -244,36 +238,39 @@ export async function POST(req: NextRequest) {
       
       const desc = customOutcome
         ? `Executive Decree: "${customDecisionPrompt}". ${customOutcome.summary}`
-        : turnOutcome.enactedPolicies.map((p) => p.name).join('; ') || turnOutcome.triggeredEvent?.description || 'Routine state governance.';
+        : turnOutcome.enactedPolicies.map((p: any) => p.name).join('; ') || turnOutcome.triggeredEvent?.description || 'Routine state governance.';
       
       const impactText = customOutcome
         ? `Immediate: ${customOutcome.immediateConsequences.join(' ')} | Long-Term: ${customOutcome.longTermRisks.join(' ')}`
         : turnOutcome.turnSummaryText;
 
-      await prisma.timelineEvent.create({
-        data: {
+      updatedTimeline = [
+        {
+          id: randomUUID(),
           gameSaveId: gameSave.id,
           year: nextYear,
           turn: nextTurn,
           title,
           description: desc,
           impact: impactText,
+          createdAt: new Date().toISOString(),
         },
-      });
+        ...updatedTimeline,
+      ];
     }
 
-    // Update GameSave currentTurn & currentYear
-    const updatedSave = await prisma.gameSave.update({
-      where: { id: gameSaveId },
-      data: { currentYear: nextYear, currentTurn: nextTurn },
-      include: {
-        nationState: true,
-        factions: true,
-        newsItems: { orderBy: { createdAt: 'desc' } },
-        timeline: { orderBy: { createdAt: 'desc' } },
-        diplomacy: true,
-      },
-    });
+    // Assemble full updated save game state
+    const updatedSave = {
+      ...gameSave,
+      currentYear: nextYear,
+      currentTurn: nextTurn,
+      updatedAt: new Date().toISOString(),
+      nationState: updatedNationState,
+      factions: updatedFactions,
+      newsItems: updatedNewsItems,
+      timeline: updatedTimeline,
+      diplomacy: updatedDiplomacy,
+    };
 
     return NextResponse.json({ success: true, gameSave: updatedSave, turnOutcome, narrative, customOutcome });
   } catch (err: any) {

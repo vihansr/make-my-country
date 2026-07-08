@@ -7,7 +7,7 @@ import { WORLD_COUNTRIES, ROLE_OPTIONS, CountryInfo } from '@/lib/data/countries
 
 interface CountrySelectionProps {
   onBack: () => void;
-  onSimulationStarted: (gameSaveId: string) => void;
+  onSimulationStarted: (gameSave: any) => void;
 }
 
 export const CountrySelection: React.FC<CountrySelectionProps> = ({ onBack, onSimulationStarted }) => {
@@ -55,7 +55,7 @@ export const CountrySelection: React.FC<CountrySelectionProps> = ({ onBack, onSi
       if (!data.success) {
         throw new Error(data.error || 'Failed to initialize simulation');
       }
-      onSimulationStarted(data.gameSave.id);
+      onSimulationStarted(data.gameSave);
     } catch (err: any) {
       setError(err.message || 'Error starting simulation');
       setIsStarting(false);

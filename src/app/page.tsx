@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LandingPage } from '@/components/landing/LandingPage';
 import { CountrySelection } from '@/components/selection/CountrySelection';
@@ -11,38 +11,52 @@ type ScreenState = 'landing' | 'select_country' | 'dashboard';
 
 export default function Home() {
   const [screen, setScreen] = useState<ScreenState>('landing');
-  const [activeSaveId, setActiveSaveId] = useState<string | null>(null);
   const [gameSave, setGameSave] = useState<any | null>(null);
+  const [hasActiveSave, setHasActiveSave] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isProcessingTurn, setIsProcessingTurn] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchGameSave = async (id: string) => {
-    setIsLoading(true);
-    setError(null);
+  useEffect(() => {
     try {
-      const res = await fetch(`/api/simulation/save?id=${id}`);
-      const data = await res.json();
-      if (data.success && data.gameSave) {
-        setGameSave(data.gameSave);
-        setActiveSaveId(id);
-        setScreen('dashboard');
-      } else {
-        throw new Error(data.error || 'Could not retrieve simulation data');
+      const savedSession = localStorage.getItem('geopolis_save');
+      if (savedSession) {
+        const parsed = JSON.parse(savedSession);
+        if (parsed && parsed.nationState) {
+          setHasActiveSave(true);
+        }
       }
-    } catch (err: any) {
-      setError(err.message || 'Error fetching save');
-    } finally {
-      setIsLoading(false);
+    } catch (e) {
+      console.error('Error scanning for saved session:', e);
+    }
+  }, []);
+
+  const handleResume = () => {
+    try {
+      const savedSession = localStorage.getItem('geopolis_save');
+      if (savedSession) {
+        const parsed = JSON.parse(savedSession);
+        setGameSave(parsed);
+        setScreen('dashboard');
+      }
+    } catch (e) {
+      setError('Could not resume saved session');
     }
   };
 
-  const handleSimulationStarted = async (gameSaveId: string) => {
-    await fetchGameSave(gameSaveId);
+  const handleSimulationStarted = (save: any) => {
+    setGameSave(save);
+    setHasActiveSave(true);
+    try {
+      localStorage.setItem('geopolis_save', JSON.stringify(save));
+    } catch (e) {
+      console.error('Failed to cache session locally:', e);
+    }
+    setScreen('dashboard');
   };
 
   const handleAdvanceTurn = async (selectedPolicyIds: string[], customPrompt?: string) => {
-    if (!activeSaveId) return;
+    if (!gameSave) return;
     setIsProcessingTurn(true);
     setError(null);
     try {
@@ -50,7 +64,7 @@ export default function Home() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          gameSaveId: activeSaveId,
+          gameSave,
           selectedPolicyIds,
           customDecisionPrompt: customPrompt,
         }),
@@ -58,6 +72,11 @@ export default function Home() {
       const data = await res.json();
       if (data.success && data.gameSave) {
         setGameSave(data.gameSave);
+        try {
+          localStorage.setItem('geopolis_save', JSON.stringify(data.gameSave));
+        } catch (e) {
+          console.error('Failed to cache session locally:', e);
+        }
       } else {
         throw new Error(data.error || 'Failed to advance turn');
       }
@@ -99,6 +118,8 @@ export default function Home() {
           >
             <LandingPage
               onStart={() => setScreen('select_country')}
+              hasActiveSave={hasActiveSave}
+              onResume={handleResume}
             />
           </motion.div>
         )}
@@ -130,7 +151,6 @@ export default function Home() {
               gameSave={gameSave}
               onAdvanceTurn={handleAdvanceTurn}
               onExitToMenu={() => {
-                setActiveSaveId(null);
                 setGameSave(null);
                 setScreen('landing');
               }}
